@@ -1,457 +1,421 @@
-# Proyecto 1: Regresión Lineal Simple
-### Dataset: Salary Dataset — Predicción de Salario por Años de Experiencia
+# Regresion Polinomial: Teoria y Practica
 
----
+## Que es la regresion polinomial
 
-## Objetivo del Proyecto
+Cuando tienes datos del mundo real y quieres encontrar la funcion matematica que mejor los describe, usas regresion. Si esa funcion es una linea recta, se llama regresion lineal. Si es una curva, se llama regresion polinomial.
 
-En este proyecto aprenderás a construir un modelo de **Regresión Lineal Simple** desde cero usando Python. Utilizaremos un dataset real que relaciona los **años de experiencia** de un empleado con su **salario anual**. Al finalizar, serás capaz de:
-
-- Comprender qué es y cómo funciona la regresión lineal simple.
-- Preprocesar datos para un modelo de Machine Learning.
-- Entrenar, evaluar y ajustar un modelo de regresión.
-- Interpretar métricas de evaluación.
-
----
-
-## ¿Qué es la Regresión Lineal Simple?
-
-La **Regresión Lineal Simple** es un método estadístico que modela la relación entre **una variable de entrada (X)** y **una variable de salida (y)** mediante una línea recta. La fórmula es:
+La regresion polinomial busca los coeficientes de un polinomio de la forma:
 
 ```
-ŷ = β₀ + β₁ · X
+y = a0 + a1*x + a2*x^2 + a3*x^3 + ... + an*x^n
 ```
 
-Donde:
-- `ŷ` → Valor predicho (salario estimado)
-- `β₀` → Intercepto (valor de y cuando X = 0)
-- `β₁` → Pendiente (cuánto cambia y por cada unidad que aumenta X)
-- `X` → Variable independiente (años de experiencia)
-
-> **Intuición:** Imagina dibujar la línea que "mejor se ajusta" a una nube de puntos en un gráfico de dispersión. Eso es exactamente lo que hace este algoritmo.
+Donde cada `a` es un coeficiente que el modelo debe encontrar, y `n` es el grado del polinomio.
 
 ---
 
-## Dataset
+## Por que usamos exponentes
 
-**Fuente:** [Salary Dataset — Simple Linear Regression (Kaggle)](https://www.kaggle.com/datasets/abhishek14398/salary-dataset-simple-linear-regression)
+Sin exponentes, una funcion solo puede producir lineas rectas. Los exponentes introducen curvatura. Cada exponente aporta un tipo distinto de forma:
 
-| Columna | Descripción |
-|---|---|
-| `YearsExperience` | Años de experiencia laboral del empleado |
-| `Salary` | Salario anual en USD |
+- `x^1` produce una linea recta
+- `x^2` produce una parabola (forma de U o arco)
+- `x^3` produce una curva en S
+- `x^4` produce una forma de W suavizada
+
+Al combinar varios de estos terminos con distintos coeficientes, puedes moldear la curva para que se ajuste a casi cualquier patron de datos.
 
 ---
 
-## Paso 0 — Preparar el Entorno
+## Como se encuentran los coeficientes
 
-Antes de comenzar, asegúrate de tener instaladas las librerías necesarias.
+### Cuando tienes el mismo numero de puntos que coeficientes
+
+Si tienes exactamente tantos puntos como coeficientes desconocidos, puedes plantear un sistema de ecuaciones y resolverlo exactamente. Por ejemplo, con 3 puntos y un polinomio de grado 2 (que tiene 3 coeficientes: a0, a1, a2), sustituyes cada punto en la formula y obtienes 3 ecuaciones con 3 incognitas. Eso se resuelve con eliminacion gaussiana: restas ecuaciones entre si para eliminar variables una por una hasta quedarte con una sola incognita, la resuelves, y sustituyes hacia atras para encontrar las demas.
+
+### Cuando tienes mas puntos que coeficientes (el caso real)
+
+En la practica, casi siempre tienes muchos mas datos que coeficientes. En ese caso, ninguna curva puede pasar exactamente por todos los puntos. El objetivo cambia: buscas la curva que se acerque lo mas posible a todos los puntos en conjunto.
+
+Para medir que tan bien se ajusta la curva, calculas el error en cada punto:
+
+```
+error_i = valor_real_i - valor_predicho_i
+```
+
+Luego sumas todos los errores al cuadrado (para que los errores positivos y negativos no se cancelen entre si):
+
+```
+S = error_1^2 + error_2^2 + ... + error_n^2
+```
+
+El objetivo es encontrar los coeficientes que hagan S lo mas pequeño posible. Para eso usas derivadas: la derivada de S respecto a cada coeficiente te dice como cambia el error cuando cambias ese coeficiente. En el punto minimo de cualquier funcion, la pendiente es cero, por lo que igualas cada derivada a cero. Eso genera un sistema de ecuaciones que se resuelve con eliminacion gaussiana. A este metodo se le llama minimos cuadrados.
+
+---
+
+## Cuantos coeficientes tiene un polinomio
+
+La formula es simple:
+
+```
+numero de coeficientes = grado del polinomio + 1
+```
+
+Por ejemplo:
+- Grado 1: 2 coeficientes (a0 y a1)
+- Grado 2: 3 coeficientes (a0, a1, a2)
+- Grado 3: 4 coeficientes (a0, a1, a2, a3)
+
+Esto importa porque necesitas al menos tantos puntos como coeficientes para que el modelo tenga sentido.
+
+---
+
+## El dilema del grado
+
+Elegir el grado del polinomio es la decision mas importante del proceso. Hay tres escenarios posibles:
+
+### Subajuste
+
+El modelo es demasiado simple para describir los datos. Ocurre cuando el grado es muy bajo. El error es alto tanto en los datos de entrenamiento como en datos nuevos.
+
+### Buen ajuste
+
+El modelo captura la tendencia real de los datos sin volverse innecesariamente complejo. El error es bajo y similar tanto en datos de entrenamiento como en datos nuevos.
+
+### Sobreajuste
+
+El modelo es tan complejo que memorizo los datos en lugar de aprender la tendencia. Ocurre cuando el grado es muy alto. El error en entrenamiento es muy bajo, pero el error en datos nuevos es alto. La curva zigzaguea entre los puntos de forma absurda.
+
+---
+
+## Como elegir el grado correcto
+
+No existe una formula para saberlo de antemano. Se descubre experimentando con los siguientes pasos:
+
+1. Grafica los datos y observa su forma general para tener una idea inicial del grado a probar.
+2. Divide el dataset en dos partes: 80% para entrenamiento y 20% para prueba. Los datos de prueba se esconden hasta el final.
+3. Entrena el modelo con distintos grados (1, 2, 3, 4...) y mide el error en ambas partes.
+4. El grado correcto es el que produce el menor error en los datos de prueba.
+
+La senal de sobreajuste es clara: el error de entrenamiento sigue bajando pero el error de prueba empieza a subir.
+
+---
+
+## Metricas de evaluacion
+
+### R cuadrado (R2)
+
+Mide que proporcion de la variacion en los datos explica el modelo. Va de 0 a 1. Un R2 de 0.90 significa que el modelo explica el 90% de la variacion. Cuanto mas cerca de 1, mejor.
+
+### RMSE (Raiz del Error Cuadratico Medio)
+
+Es el promedio de los errores de prediccion, en las mismas unidades que los datos originales. Si predices temperaturas y el RMSE es 2, el modelo se equivoca en promedio 2 grados. Cuanto mas pequeño, mejor.
+
+---
+
+## El dataset: Auto MPG
+
+Para este ejercicio usaremos el dataset **Auto MPG**, disponible publicamente en el repositorio de UCI Machine Learning:
+
+```
+https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data
+```
+
+Este dataset contiene informacion sobre el consumo de combustible de distintos automoviles de los anos 70 y 80. Tiene las siguientes columnas:
+
+- `mpg`: millas por galon (consumo de combustible, variable objetivo)
+- `cylinders`: numero de cilindros del motor
+- `displacement`: desplazamiento del motor en pulgadas cubicas
+- `horsepower`: caballos de fuerza
+- `weight`: peso del vehiculo en libras
+- `acceleration`: tiempo en segundos de 0 a 60 mph
+- `model_year`: ano del modelo
+- `origin`: origen del auto (1=americano, 2=europeo, 3=japones)
+- `car_name`: nombre del auto
+
+Para este ejercicio usaremos `horsepower` como variable de entrada (x) y `mpg` como variable de salida (y). La relacion entre ambas no es lineal: a medida que aumentan los caballos de fuerza, el consumo baja, pero no de forma constante. Una curva polinomial describe esta relacion mejor que una linea recta.
+
+---
+
+# Pasos de la Práctica
+
+---
+
+### Paso 1: Importar las bibliotecas necesarias
+
+Antes de hacer cualquier cosa necesitamos cargar las herramientas que vamos a usar. Cada biblioteca tiene un proposito especifico:
+
+- `pandas`: carga y manipula tablas de datos
+- `numpy`: operaciones matematicas con arrays
+- `matplotlib.pyplot`: hace graficas
+- `PolynomialFeatures`: transforma x en [x, x^2, x^3...] segun el grado que elijas
+- `LinearRegression`: encuentra los coeficientes optimos usando minimos cuadrados
+- `train_test_split`: divide los datos en entrenamiento y prueba
+- `r2_score` y `mean_squared_error`: miden que tan bueno es el modelo
 
 ```python
-# Ejecuta esta celda si no tienes las librerías instaladas
-# !pip install pandas numpy matplotlib seaborn scikit-learn
-```
-
-```python
-# ─── Importaciones ───────────────────────────────────────────────────────────
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-# Configuración visual
-plt.style.use('seaborn-v0_8-whitegrid')
-sns.set_palette("husl")
-print("Librerías cargadas correctamente")
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score, mean_squared_error
 ```
 
 ---
 
-## Paso 1 — Cargar y Explorar los Datos
+### Paso 2: Cargar el dataset
 
-Carga el archivo CSV descargado de Kaggle. El archivo se llama `Salary_dataset.csv`.
+El archivo no tiene encabezados, asi que debes asignarlos manualmente. Tambien tiene valores faltantes marcados con `?` en la columna horsepower, por lo que le indicamos a pandas que los trate como nulos desde el principio con `na_values='?'`.
 
 ```python
-# Carga el dataset
-df = pd.read_csv("Salary_dataset.csv")
+url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data'
 
-# Vistazo inicial
-print("Primeras 5 filas del dataset:")
+columnas = ['mpg', 'cylinders', 'displacement', 'horsepower', 'weight',
+            'acceleration', 'model_year', 'origin', 'car_name']
+
+df = pd.read_csv(url, sep='\s+', names=columnas, na_values='?')
+
 df.head()
 ```
 
-```python
-# Información general del dataset
-df.shape
-```
-
-```python
-df.info()
-```
-
-```python
-df.isnull().sum()
-```
-
-```python
-# Estadísticas descriptivas
-print("\nEstadísticas descriptivas:")
-df.describe().round(2)
-```
-
-> **¿Qué observar?**
-> - `count`: número de registros — verifica que sean 30.
-> - `mean`: promedio — ¿cuánto gana en promedio alguien con experiencia promedio?
-> - `min` / `max`: rangos de los datos.
+El resultado esperado es una tabla con 9 columnas donde cada fila es un auto. Si ves numeros en todas las columnas numericas, el archivo se cargo correctamente.
 
 ---
 
-## Paso 2 — Análisis Exploratorio de Datos (EDA)
+### Paso 3: Explorar y limpiar los datos
 
-Antes de entrenar cualquier modelo, debemos entender visualmente nuestros datos.
+Antes de entrenar cualquier modelo, siempre debes entender bien los datos que tienes: cuantas filas hay, que tipos de datos tiene cada columna, y si hay valores faltantes que puedan causar errores.
 
 ```python
-# ─── 2.1 Verificar valores nulos ─────────────────────────────────────────────
-print("Valores nulos por columna:")
+# tamaño del dataset: (filas, columnas)
+print(df.shape)
+
+# Tipo de dato de cada columna
+print(df.dtypes)
+
+# Cuantos valores nulos hay en cada columna
 print(df.isnull().sum())
 ```
 
-> **Valor esperado:** 0 valores nulos. Si hay nulos, habrá que tratarlos antes de continuar.
+Cuando ejecutes esto veras que `horsepower` tiene 6 valores nulos. Los eliminamos:
 
 ```python
-# ─── 2.2 Subplot con 2 histogramas ───────────────────────────────────────
-fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+df = df.dropna()
 
-axes[0].hist(df['YearsExperience'], bins=10, color='steelblue', edgecolor='white')
-axes[0].set_title('Distribución: Años de Experiencia')
-axes[0].set_xlabel('Años')
-axes[0].set_ylabel('Frecuencia')
+# Verificamos que horsepower es numerica
+df['horsepower'] = pd.to_numeric(df['horsepower'])
 
-axes[1].hist(df['Salary'], bins=10, color='coral', edgecolor='white')
-axes[1].set_title('Distribución: Salario')
-axes[1].set_xlabel('Salario (USD)')
-axes[1].set_ylabel('Frecuencia')
-
-plt.tight_layout()
-plt.show()
+# Comprobamos el tamaño despues de limpiar
+print(df.shape)
 ```
 
-```python
-# ─── 2.3 scatter plot de YearsExperience (eje X) vs Salary (eje Y) ───────────────────────────────
-plt.figure(figsize=(8, 5))
-plt.scatter(df['YearsExperience'], df['Salary'], color='steelblue', s=80, alpha=0.8, edgecolors='white')
-plt.title('Salario vs. Años de Experiencia', fontsize=14)
-plt.xlabel('Años de Experiencia')
-plt.ylabel('Salario (USD)')
-plt.tight_layout()
-plt.show()
-```
-
-> **¿Qué observar en el scatter plot?**
-> - Si los puntos forman una **línea ascendente**, hay una relación lineal positiva → ¡ideal para regresión lineal!
-> - Si los puntos están dispersos sin patrón, la regresión lineal podría no ser el mejor modelo.
-
-```python
-# ─── 2.4 Correlación de Pearson ──────────────────────────────────────────────
-correlacion = df['YearsExperience'].corr(df['Salary'])
-print(f" Correlación de Pearson (X, y): {correlacion:.4f}")
-```
-
->  **Interpretación de la correlación:**
-> | Valor | Interpretación |
-> |---|---|
-> | 0.9 – 1.0 | Correlación muy fuerte positiva  |
-> | 0.7 – 0.9 | Correlación fuerte positiva |
-> | 0.4 – 0.7 | Correlación moderada |
-> | 0.0 – 0.4 | Correlación débil |
->
-> Para este dataset, esperamos un valor **> 0.95** — excelente para regresión lineal.
+Antes de limpiar habia 398 filas. Despues quedan 392. Esas 6 filas eran los autos con horsepower desconocido.
 
 ---
 
-##  Paso 3 — Preparación de los Datos
+### Paso 4: Visualizar la relacion entre horsepower y mpg
+
+Antes de entrenar cualquier modelo, grafica los datos crudos. Esta es una de las practicas mas importantes en ciencia de datos: ver los datos antes de modelarlos. La forma visual te da informacion que los numeros solos no te dan.
 
 ```python
-# ─── 3.1 Separar variables ───────────────────────────────────────────────────
-# X: variable independiente (entrada)
-# y: variable dependiente (salida a predecir)
-
-X = df[['YearsExperience']]   # DataFrame 2D — sklearn lo requiere así
-y = df['Salary']               # Series 1D
-
-print(f" Forma de X: {X.shape}")
-print(f" Forma de y: {y.shape}")
+plt.figure(figsize=(8, 5))
+plt.scatter(df['horsepower'], df['mpg'], alpha=0.5, color='steelblue')
+plt.xlabel('Caballos de fuerza (horsepower)')
+plt.ylabel('Millas por galon (mpg)')
+plt.title('Relacion entre potencia y consumo de combustible')
+plt.grid(True)
+plt.show()
 ```
 
->  **Nota importante:** Usamos `df[['YearsExperience']]` (doble corchete) para que X sea un DataFrame 2D. Scikit-learn espera matrices 2D como entrada, no vectores 1D.
+Observa la forma de la nube de puntos. Baja rapidamente al principio y luego se aplana. Eso es una pista visual clara de que necesitas al menos un termino x^2: una linea recta no puede capturar esa curvatura.
+
+---
+
+### Paso 5: Preparar los datos para el modelo
+
+Separamos la variable de entrada de la variable objetivo, y dividimos en entrenamiento y prueba. Los datos de prueba los guardamos a un lado y no los tocamos hasta la evaluacion final. Simulamos que esos datos son del futuro y todavia no los conocemos.
 
 ```python
-# ─── 3.2 División en conjuntos de entrenamiento y prueba ──────────────────────
-# 80% para entrenar, 20% para evaluar
-# random_state=42 garantiza reproducibilidad (siempre el mismo split)
+# Variable de entrada (doble corchete para que quede como array 2D)
+X = df[['horsepower']]
 
+# Variable objetivo
+y = df['mpg']
+
+# Division 80% entrenamiento, 20% prueba
+# random_state=42 garantiza que siempre obtengas la misma division
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y,
-    test_size=0.2,
-    random_state=42
+    X, y, test_size=0.2, random_state=42
 )
 
-print(f" Datos de entrenamiento: {X_train.shape[0]} muestras")
-print(f" Datos de prueba:        {X_test.shape[0]} muestras")
+print(f'Entrenamiento: {X_train.shape[0]} filas')
+print(f'Prueba:        {X_test.shape[0]} filas')
 ```
 
->  **¿Por qué dividir los datos?**
-> - **Entrenamiento (80%):** El modelo aprende de estos datos.
-> - **Prueba (20%):** Evaluamos el modelo con datos que NUNCA ha visto. Así sabemos si realmente aprendió o solo memorizó.
->
-> Si evaluáramos con los mismos datos de entrenamiento, podríamos creer que el modelo es excelente cuando en realidad solo memorizó.
+Resultado esperado:
+```
+Entrenamiento: 313 filas
+Prueba:        79 filas
+```
 
 ---
 
-##  Paso 4 — Entrenar el Modelo
+### Paso 6: Entrenar modelos con distintos grados y comparar
+
+Este es el paso central. Probamos grados del 1 al 5 y medimos el error de cada uno en entrenamiento y en prueba.
+
+El truco de sklearn es que no existe una funcion unica llamada "regresion polinomial". En cambio, se usan dos pasos encadenados:
+
+1. `PolynomialFeatures` transforma tu columna horsepower en multiples columnas: [hp, hp^2, hp^3...]. Esto convierte el problema en una regresion lineal con varias variables.
+2. `LinearRegression` encuentra los coeficientes de esas columnas usando minimos cuadrados.
+
+El resultado es exactamente una regresion polinomial.
 
 ```python
-# ─── 4.1 Crear e instanciar el modelo ────────────────────────────────────────
-modelo = LinearRegression()
+resultados = []
 
-# El método .fit() encuentra los valores óptimos de β₀ y β₁
-modelo.fit(X_train, y_train)
+for grado in range(1, 6):
 
-print(" Modelo entrenado exitosamente")
-print("─" * 40)
-print(f" Intercepto  (β₀): {modelo.intercept_:,.2f}")
-print(f" Pendiente   (β₁): {modelo.coef_[0]:,.2f}")
+    # Paso A: crear el transformador para este grado
+    poly = PolynomialFeatures(degree=grado, include_bias=False)
+
+    # Paso B: transformar los datos
+    # fit_transform sobre entrenamiento: aprende la escala y transforma
+    # solo transform sobre prueba: usa la escala aprendida, no aprende nueva
+    X_train_poly = poly.fit_transform(X_train)
+    X_test_poly  = poly.transform(X_test)
+
+    # Paso C: entrenar el modelo
+    modelo = LinearRegression()
+    modelo.fit(X_train_poly, y_train)
+
+    # Paso D: predecir
+    pred_train = modelo.predict(X_train_poly)
+    pred_test  = modelo.predict(X_test_poly)
+
+    # Paso E: calcular metricas
+    r2_train   = r2_score(y_train, pred_train)
+    r2_test    = r2_score(y_test, pred_test)
+    rmse_train = mean_squared_error(y_train, pred_train) ** 0.5
+    rmse_test  = mean_squared_error(y_test, pred_test) ** 0.5
+
+    resultados.append({
+        'grado'     : grado,
+        'r2_train'  : round(r2_train, 4),
+        'r2_test'   : round(r2_test, 4),
+        'rmse_train': round(rmse_train, 4),
+        'rmse_test' : round(rmse_test, 4)
+    })
+
+pd.DataFrame(resultados)
 ```
 
->  **Interpretación de los coeficientes:**
-> - **β₀ (intercepto):** Es el salario base teórico cuando los años de experiencia son 0. Puede ser un valor negativo o no significativo en la práctica, pero es necesario matemáticamente.
-> - **β₁ (pendiente):** Por cada año adicional de experiencia, el salario aumenta en β₁ dólares. Por ejemplo, si β₁ = 9,450, entonces cada año extra de experiencia equivale a ~$9,450 más de salario.
+Resultado esperado aproximado:
+
+```
+   grado  r2_train  r2_test  rmse_train  rmse_test
+0      1    0.6059   0.6080      4.7144     4.7362
+1      2    0.6876   0.6923      4.1883     4.1848
+2      3    0.7013   0.6989      4.1009     4.1281
+3      4    0.7018   0.6901      4.0975     4.1920
+4      5    0.7031   0.6730      4.0880     4.3012
+```
+
+Observa que el rmse_test es minimo en grado 2 o 3, y a partir de ahi empieza a subir aunque el rmse_train siga bajando. Esa es exactamente la señal de sobreajuste.
+
+---
+
+### Paso 7: Visualizar el modelo ganador
+
+Con el grado que obtuvo el menor rmse_test, entrenamos el modelo final y dibujamos la curva sobre los puntos originales. Creamos un array de 300 valores de x espaciados uniformemente para que la curva se vea suave en lugar de angulosa.
 
 ```python
-# ─── 4.3 Visualizar la línea de regresión con un scatter plot ────────────────────────────────────
+grado_ganador = 2  # ajusta segun tus resultados del paso anterior
+
+poly_final   = PolynomialFeatures(degree=grado_ganador, include_bias=False)
+X_train_poly = poly_final.fit_transform(X_train)
+modelo_final = LinearRegression()
+modelo_final.fit(X_train_poly, y_train)
+
+# Array de x para dibujar la curva suavemente entre el minimo y maximo del dataset
+x_curva      = np.linspace(X['horsepower'].min(), X['horsepower'].max(), 300).reshape(-1, 1)
+x_curva_poly = poly_final.transform(x_curva)
+y_curva      = modelo_final.predict(x_curva_poly)
+
+# Grafica
 plt.figure(figsize=(8, 5))
-
-# Datos de entrenamiento
-plt.scatter(X_train, y_train, color='steelblue', s=80, alpha=0.8,
-            edgecolors='white', label='Datos entrenamiento')
-# Datos de prueba
-plt.scatter(X_test, y_test, color='coral', s=80, alpha=0.8,
-            edgecolors='white', label='Datos prueba')
-
-# Línea de regresión
-X_linea = np.linspace(X.min(), X.max(), 100).reshape(-1, 1)
-plt.plot(X_linea, modelo.predict(X_linea), color='black', linewidth=2,
-         label='Línea de regresión')
-
-plt.title('Regresión Lineal Simple: Salario vs. Experiencia', fontsize=13)
-plt.xlabel('Años de Experiencia')
-plt.ylabel('Salario (USD)')
+plt.scatter(df['horsepower'], df['mpg'], alpha=0.4, color='gray', label='Datos reales')
+plt.plot(x_curva, y_curva, color='steelblue', linewidth=2, label=f'Polinomio grado {grado_ganador}')
+plt.xlabel('Caballos de fuerza (horsepower)')
+plt.ylabel('Millas por galon (mpg)')
+plt.title('Regresion polinomial ajustada')
 plt.legend()
-plt.tight_layout()
+plt.grid(True)
 plt.show()
 ```
 
----
-
-# 5 — Evaluación del Modelo
-
-Una vez entrenado el modelo, necesitamos medir qué tan bien hace predicciones.
-
-```python
-# ─── 5.1 Generar predicciones sobre datos de prueba ──────────────────────────
-y_pred = modelo.predict(X_test)
-
-# ─── 5.2 Tabla comparativa: valores reales vs predichos ──────────────────────
-comparacion = pd.DataFrame({
-    'Años_Exp': X_test['YearsExperience'].values,
-    'Salario_Real': y_test.values,
-    'Salario_Predicho': y_pred.round(2),
-    'Error': (y_test.values - y_pred).round(2)
-})
-print("📋 Comparación Real vs Predicho:")
-print(comparacion.to_string(index=False))
-```
-
-```python
-# ─── 5.3 Calcular métricas de evaluación ─────────────────────────────────────
-mae  = mean_absolute_error(y_test, y_pred)
-mse  = mean_squared_error(y_test, y_pred)
-rmse = np.sqrt(mse)
-r2   = r2_score(y_test, y_pred)
-
-print("=" * 45)
-pr        MÉTRICAS DE EVALUACIÓN")
-print("=" * 45)
-print(f"  MAE  (Error Absoluto Medio):    ${mae:>12,.2f}")
-print(f"  MSE  (Error Cuadrático Medio):  ${mse:>12,.2f}")
-print(f"  RMSE (Raíz Error Cuadrático):   ${rmse:>12,.2f}")
-print(f"  R²   (Coeficiente Determinación): {r2:>10.4f}")
-print("=" * 45)
-```
-
-> ###  Guía de Interpretación de Métricas
->
-> | Métrica | Fórmula | Qué mide | Valor ideal |
-> |---|---|---|---|
-> | **MAE** | `mean(|y - ŷ|)` | Error promedio en las mismas unidades de y | Lo más bajo posible |
-> | **MSE** | `mean((y - ŷ)²)` | Penaliza errores grandes más que MSE | Lo más bajo posible |
-> | **RMSE** | `√MSE` | Error en las mismas unidades (más interpretable que MSE) | Lo más bajo posible |
-> | **R²** | `1 - SS_res/SS_tot` | % de varianza explicada por el modelo | Cercano a 1.0 |
->
-> ####  Valores esperados para este dataset:
-> - **R² ≥ 0.90** → El modelo explica al menos el 90% de la variación en salarios. Para este dataset con alta correlación, esperamos **R² ≈ 0.95 o mayor**.
-> - **MAE < $5,000** → En promedio, el modelo se equivoca menos de $5,000 por predicción. Aceptable para salarios en el rango de $37k–$122k.
-> - **RMSE** → Debe estar en un rango similar al MAE. Si RMSE >> MAE, hay algunos outliers que el modelo no predice bien.
+La curva azul debe seguir la forma general de los puntos grises sin zigzaguear entre ellos.
 
 ---
 
-## 📉 Paso 6 — Análisis de Residuos
+### Paso 8: Interpretar los coeficientes
 
-Los **residuos** son la diferencia entre el valor real y el predicho: `e = y - ŷ`. Analizar los residuos nos permite verificar si el modelo es adecuado.
+Los coeficientes del modelo te dicen exactamente como esta construida la curva matematicamente.
 
 ```python
-residuos = y_test.values - y_pred
-
-fig, axes = plt.subplots(1, 2, figsize=(13, 5))
-
-# ─── 6.1 Residuos vs Valores Predichos ───────────────────────────────────────
-axes[0].scatter(y_pred, residuos, color='steelblue', s=70, alpha=0.8, edgecolors='white')
-axes[0].axhline(y=0, color='red', linestyle='--', linewidth=1.5)
-axes[0].set_title('Residuos vs. Valores Predichos')
-axes[0].set_xlabel('Valores Predichos (ŷ)')
-axes[0].set_ylabel('Residuos (y - ŷ)')
-
-# ─── 6.2 Distribución de residuos ────────────────────────────────────────────
-axes[1].hist(residuos, bins=8, color='coral', edgecolor='white')
-axes[1].axvline(x=0, color='red', linestyle='--', linewidth=1.5)
-axes[1].set_title('Distribución de Residuos')
-axes[1].set_xlabel('Residuo')
-axes[1].set_ylabel('Frecuencia')
-
-plt.tight_layout()
-plt.show()
+print(f'Intercepto (a0): {modelo_final.intercept_:.4f}')
+print(f'Coeficientes:    {modelo_final.coef_}')
 ```
 
->  **¿Qué esperar en los gráficos de residuos?**
->
-> **Gráfico izquierdo (Residuos vs Predichos):**
-> -  **Bueno:** Los puntos distribuidos aleatoriamente alrededor de la línea y = 0, sin patrón visible.
-> -  **Problema:** Si ves una curva o patrón en forma de U, los datos tienen relación no lineal y deberías usar regresión polinómica.
->
-> **Gráfico derecho (Distribución de residuos):**
-> -  **Bueno:** Distribución aproximadamente simétrica alrededor de 0 (campana de Gauss).
-> -  **Problema:** Si está muy sesgada, el modelo tiene un error sistemático.
+Resultado esperado para grado 2:
+```
+Intercepto (a0): 56.9001
+Coeficientes:    [-0.4662  0.0012]
+```
+
+Esto significa que la curva encontrada es:
+
+```
+mpg = 56.90 - 0.4662 * hp + 0.0012 * hp^2
+```
+
+El coeficiente de hp es negativo: a mas caballos de fuerza, el mpg baja. El coeficiente de hp^2 es positivo pero muy pequeno: amortigua la caida, haciendo que la curva se aplane en lugar de seguir bajando indefinidamente. Eso es exactamente lo que se ve en la grafica.
 
 ---
 
-## 🔧 Paso 7 — ¿Qué hacer si el modelo no predice bien?
+### Paso 9: Hacer predicciones con el modelo
 
-Si los resultados no son satisfactorios (por ejemplo, R² < 0.80), considera estas estrategias:
-
-```python
-# ─── Estrategia 1: Revisar si hay outliers que afectan el modelo ─────────────
-# Identificar predicciones con error > 2 desviaciones estándar
-umbral = 2 * residuos.std()
-outliers_idx = np.where(np.abs(residuos) > umbral)[0]
-
-print(f"  Predicciones con error grande (>{umbral:.0f} USD):")
-if len(outliers_idx) > 0:
-    print(comparacion.iloc[outliers_idx])
-else:
-    print("   No se detectaron outliers significativos")
-```
+Una vez entrenado el modelo, puedes predecir el mpg de cualquier auto con tal de que le des su horsepower. Recuerda que antes de predecir debes transformar el valor con PolynomialFeatures, exactamente igual que hiciste con los datos de entrenamiento.
 
 ```python
-# ─── Estrategia 2: Evaluar también sobre datos de entrenamiento ──────────────
-# Si R²_train >> R²_test → hay overfitting (pero en regresión lineal simple es poco probable)
-y_pred_train = modelo.predict(X_train)
-r2_train = r2_score(y_train, y_pred_train)
-r2_test  = r2_score(y_test, y_pred)
+autos_nuevos = np.array([[70], [100], [150], [200]])
+autos_poly   = poly_final.transform(autos_nuevos)
+predicciones = modelo_final.predict(autos_poly)
 
-print(f"R² entrenamiento: {r2_train:.4f}")
-print(f"R² prueba:        {r2_test:.4f}")
-print(f"Diferencia:       {abs(r2_train - r2_test):.4f}")
-
-if abs(r2_train - r2_test) > 0.10:
-    print("  Posible overfitting — gran diferencia entre entrenamiento y prueba")
-else:
-    print(" Modelo generaliza bien — diferencia pequeña entre conjuntos")
+for hp, mpg_pred in zip(autos_nuevos.flatten(), predicciones):
+    print(f'Auto con {hp} hp  ->  {mpg_pred:.1f} mpg predichos')
 ```
 
-```python
-# ─── Estrategia 3: Validación cruzada (K-Fold) ───────────────────────────────
-# Más robusto que un único train/test split, especialmente con datasets pequeños
-from sklearn.model_selection import cross_val_score
-
-cv_scores = cross_val_score(LinearRegression(), X, y, cv=5, scoring='r2')
-
-print(" Validación Cruzada (5-Fold):")
-print(f"  R² por fold: {cv_scores.round(4)}")
-print(f"  R² promedio: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
+Resultado esperado aproximado:
+```
+Auto con 70 hp   ->  30.2 mpg predichos
+Auto con 100 hp  ->  24.5 mpg predichos
+Auto con 150 hp  ->  17.8 mpg predichos
+Auto con 200 hp  ->  14.3 mpg predichos
 ```
 
->  **Validación Cruzada (K-Fold):** Divide los datos en K partes iguales. En cada iteración, usa K-1 partes para entrenar y 1 para evaluar. Esto da una estimación más confiable del rendimiento real del modelo, especialmente cuando el dataset es pequeño (como nuestros 30 registros).
+Los valores bajan a medida que sube la potencia, y la caida es cada vez mas lenta. Eso es consistente con lo que muestra la grafica y con la logica fisica: los autos muy potentes son ineficientes, pero pasar de 150 a 200 hp no penaliza tanto el consumo como pasar de 70 a 100 hp.
 
 ---
 
-##  Paso 8 — Hacer Predicciones Nuevas
+## Nota sobre el uso de sklearn
 
-```python
-# ─── Predecir el salario para distintos años de experiencia ──────────────────
-nuevos_datos = pd.DataFrame({'YearsExperience': [1.5, 5.0, 8.0, 10.0, 12.0]})
-predicciones = modelo.predict(nuevos_datos)
+sklearn no tiene una funcion llamada "regresion polinomial" directamente. Lo que hace internamente es:
 
-print(" Predicciones de salario:")
-print("-" * 40)
-for exp, sal in zip(nuevos_datos['YearsExperience'], predicciones):
-    print(f"  {exp:>5.1f} años de experiencia → ${sal:>10,.2f} USD")
-```
+1. `PolynomialFeatures` transforma tu columna x en multiples columnas [x, x^2, x^3...]
+2. `LinearRegression` encuentra los coeficientes de esas columnas usando minimos cuadrados
 
----
-
-##  Paso 9 — Resumen y Conclusiones
-
-```python
-# ─── Resumen completo del modelo ─────────────────────────────────────────────
-print("=" * 50)
-print("        RESUMEN DEL MODELO")
-print("=" * 50)
-print(f"\n  Ecuación: Salario = {modelo.intercept_:,.2f} + {modelo.coef_[0]:,.2f} × Años")
-print(f"\n  Métricas sobre conjunto de prueba:")
-print(f"    • R²   = {r2:.4f}  {' Excelente' if r2 >= 0.90 else ' Mejorable'}")
-print(f"    • MAE  = ${mae:,.2f}")
-print(f"    • RMSE = ${rmse:,.2f}")
-print(f"\n  Validación cruzada (5-Fold):")
-print(f"    • R² promedio = {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
-print("=" * 50)
-```
-
-> ###  Checklist de un buen modelo de Regresión Lineal Simple
->
-> - [ ] R² ≥ 0.85 en datos de prueba
-> - [ ] MAE razonable respecto al rango de y
-> - [ ] Diferencia R²_train − R²_test < 0.10
-> - [ ] Residuos distribuidos aleatoriamente (sin patrón)
-> - [ ] Residuos con distribución aproximadamente normal
-> - [ ] R² de validación cruzada consistente con R² de prueba
-
----
-
-##  Conceptos Clave Aprendidos
-
-| Concepto | Descripción |
-|---|---|
-| **Regresión Lineal** | Modelo que ajusta una línea recta entre X e y |
-| **β₀ y β₁** | Intercepto y pendiente de la recta |
-| **Train/Test Split** | División de datos para evaluación honesta |
-| **R²** | Porcentaje de varianza explicada (0 a 1) |
-| **MAE / RMSE** | Magnitud del error en unidades originales |
-| **Análisis de residuos** | Diagnóstico de supuestos del modelo |
-| **Validación cruzada** | Evaluación robusta con múltiples splits |
-
----
-
-*Proyecto 1 de 5 — Serie: Modelos de Regresión con Python*
+El resultado es exactamente una regresion polinomial. La separacion en dos pasos existe porque la misma logica de minimos cuadrados que sirve para una linea recta sirve tambien para una curva, siempre que primero transformes las entradas.
